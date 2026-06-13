@@ -9,3 +9,4 @@ class SupabaseConfig {
   }
 }
 //TallerCostura63 contraseña del proyecto de supabase
+

@@ -6,7 +6,6 @@ class Pedido {
   final String codigoPedido;
   final String nombreCliente;
   final String telefono;
-
   final String descripcion;
 
   final double precioTotal;

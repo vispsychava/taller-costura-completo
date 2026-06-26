@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/shelf.dart';
+import '../services/supabase_service.dart'; 
 
 class NewOrderScreen extends StatefulWidget {
   final List<Shelf> shelves;
@@ -16,6 +17,8 @@ class NewOrderScreen extends StatefulWidget {
 }
 
 class _NewOrderScreenState extends State<NewOrderScreen> {
+   final _pedidoService = SupabaseService(); 
+  bool _isLoading = false;   
   final _formKey = GlobalKey<FormState>();
 
   final clientNameController = TextEditingController();
@@ -832,203 +835,216 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           vertical: 16,
                         ),
                       ),
-                      onPressed: () {
-                        if (!_formKey.currentState!.validate()) {
-                          return;
-                        }
+                       onPressed: _isLoading ? null : () async {
+                      if (!_formKey.currentState!.validate()) return;
+                      final fechaEntrega = 
+                     '${deliveryDate.year}-'
+                     '${deliveryDate.month.toString().padLeft(2, '0')}-'
+                     '${deliveryDate.day.toString().padLeft(2, '0')}';
 
-                        if (shelfAssignment == null || shelfAssignment!.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("⚠️ Selecciona un estante"),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                          return;
-                        }
-
-                        final selectedShelf = widget.shelves.firstWhere(
-                          (s) => s.id == shelfAssignment,
-                          orElse: () => Shelf(id: '', capacity: 0, garmentsCount: 0, status: '', lastActivity: ''),
-                        );
-                        
-                        if (selectedShelf.status == "Full" || selectedShelf.garmentsCount >= selectedShelf.capacity) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("⚠️ Este estante ya está lleno, selecciona otro"),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                          return;
-                        }
-
-                        final timestamp = DateTime.now().millisecondsSinceEpoch;
-                        final id = 'ORD-${timestamp.toString().substring(7)}';
-
-                        final measurements = {
-                          'bust': double.tryParse(bustController.text.trim()) ?? 0,
-                          'waist': double.tryParse(waistController.text.trim()) ?? 0,
-                          'hip': double.tryParse(hipController.text.trim()) ?? 0,
-                          'length': double.tryParse(lengthController.text.trim()) ?? 0,
-                        };
-
-                        final newOrder = {
-                          'id': id,
-                          'clientName': clientNameController.text.trim(),
-                          'clientPhone': phoneController.text.trim(),
-                          'clientEmail': emailController.text.trim(),
-                          'clientAvatar': 'https://i.pravatar.cc/150?img=${timestamp % 70}',
-                          'shelfAssignment': shelfAssignment!,
-                          'priority': priority,
-                          'garmentType': garmentType,
-                          'title': '${garmentType == 'vestido' ? 'Vestido' : garmentType == 'pantalon' ? 'Pantalón' : garmentType == 'saco' ? 'Saco' : garmentType == 'falda' ? 'Falda' : 'Ajuste'} - ${clientNameController.text.trim()}',
-                          'size': sizeController.text.trim(),
-                          'description': descriptionController.text.trim(),
-                          'deliveryDate': '${deliveryDate.day}/${deliveryDate.month}/${deliveryDate.year}',
-                          'expectedDeliveryDate': '${deliveryDate.day}/${deliveryDate.month}/${deliveryDate.year}',
-                          'totalAmount': totalAmount,
-                          'advancePaid': advancePaid,
-                          'balanceDue': balanceDue,
-                          'status': 'Sin empezar',
-                          'statusDate': DateTime.now().toIso8601String(),
-                          'progressNotes': [],
-                          'activityHistory': [],
-                          'measurements': measurements,
-                        };
-
-                        widget.onSaveOrder(newOrder);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("✅ Pedido guardado correctamente"),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        "Guardar Pedido",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                     if (shelfAssignment == null || shelfAssignment!.isEmpty) {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(
+                          content: Text("⚠️ Selecciona un estante"),
+                         backgroundColor: Colors.orange,
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+                          );
+                       return;
+                        }
 
-  /// ✅ CAMPO DE MEDIDA COMPACTO
-  Widget _compactMeasureField(String label, TextEditingController controller) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: Colors.grey.shade600,
-          fontWeight: FontWeight.w500,
-          fontSize: 11,
-        ),
-        hintText: 'cm',
-        hintStyle: TextStyle(
-          color: Colors.grey.shade400,
-          fontSize: 11,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: Colors.grey.shade200,
-            width: 1.0,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(
-            color: Color(0xff6D3EFF),
-            width: 1.5,
-          ),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 8,
-        ),
-        isDense: true,
-      ),
-      style: const TextStyle(
-        fontSize: 13,
-        color: Color(0xff102A43),
-      ),
-    );
-  }
+                     final selectedShelf = widget.shelves.firstWhere(
+                     (s) => s.id == shelfAssignment,
+                      orElse: () => Shelf(id: '', capacity: 0, garmentsCount: 0, status: '', lastActivity: ''),
+                       );
+ 
+                    if (selectedShelf.status == "Full" || selectedShelf.garmentsCount >= selectedShelf.capacity) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(
+                      content: Text("⚠️ Este estante ya está lleno"),
+                      backgroundColor: Colors.orange,
+                       ),
+                       );
+                       return;
+                       }
 
-  Widget _priorityOption(String label, IconData icon) {
-    final isSelected = priority == label;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            priority = label;
-          });
-        },
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            vertical: 10,
-            horizontal: 4,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xff6D3EFF).withOpacity(.1)
-                : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xff6D3EFF)
-                  : Colors.grey.shade200,
-              width: 1.5,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isSelected
-                    ? const Color(0xff6D3EFF)
-                    : Colors.grey.shade500,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected
-                      ? const Color(0xff6D3EFF)
-                      : Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+
+                      final timestamp = DateTime.now().millisecondsSinceEpoch;
+                      final id = 'ORD-${timestamp.toString().substring(7)}';
+
+                      final newOrder = {
+                        'id': id,
+                        'clientName': clientNameController.text.trim(),
+                        'clientPhone': phoneController.text.trim(),
+                        'clientEmail': emailController.text.trim(),
+                        'shelfAssignment': shelfAssignment!,
+                        'priority': priority,
+                        'garmentType': garmentType,
+                        'title': '...',
+                        'size': sizeController.text.trim(),
+                        'description': descriptionController.text.trim(),
+                        'deliveryDate': fechaEntrega,        
+                        'expectedDeliveryDate': fechaEntrega,
+                        'totalAmount': totalAmount,
+                        'advancePaid': advancePaid,
+                        'balanceDue': balanceDue,
+                        'status': 'Sin empezar',
+                        'statusDate': DateTime.now().toIso8601String(),
+                      };
+
+                        setState(() => _isLoading = true);
+
+                        final exito = await _pedidoService.insertarPedido(newOrder);
+
+                        setState(() => _isLoading = false);
+
+                        if (!context.mounted) return; 
+
+                        if (exito) {
+                          widget.onSaveOrder(newOrder); 
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("✅ Pedido guardado correctamente"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("❌ Error al guardar. Revisa tu conexión"),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                                          child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              "Guardar Pedido",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 30),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                    /// ✅ CAMPO DE MEDIDA COMPACTO
+                    Widget _compactMeasureField(String label, TextEditingController controller) {
+                      return TextFormField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: label,
+                          labelStyle: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                          ),
+                          hintText: 'cm',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 11,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 1.0,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xff6D3EFF),
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          isDense: true,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xff102A43),
+                        ),
+                      );
+                    }
+
+                    Widget _priorityOption(String label, IconData icon) {
+                      final isSelected = priority == label;
+                      return Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              priority = label;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xff6D3EFF).withOpacity(.1)
+                                  : Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xff6D3EFF)
+                                    : Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  icon,
+                                  color: isSelected
+                                      ? const Color(0xff6D3EFF)
+                                      : Colors.grey.shade500,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight:
+                                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                                    color: isSelected
+                                        ? const Color(0xff6D3EFF)
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  }

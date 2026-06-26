@@ -1,6 +1,8 @@
 // lib/screens/add_shelf_screen.dart
 import 'package:flutter/material.dart';
 import '../models/shelf.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 class AddShelfScreen extends StatefulWidget {
   final Function(Shelf) onAddShelf;
@@ -64,7 +66,7 @@ class _AddShelfScreenState extends State<AddShelfScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xff6D3EFF).withOpacity(.1),
+                            color: const Color(0xff6D3EFF).withValues(alpha: .1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
@@ -227,23 +229,33 @@ class _AddShelfScreenState extends State<AddShelfScreen> {
                           vertical: 16,
                         ),
                       ),
-                      onPressed: () {
-                        if (!_formKey.currentState!.validate()) {
-                          return;
-                        }
+                      onPressed: () async {
+                       if (!_formKey.currentState!.validate()) return;
 
-                        final shelf = Shelf(
-                          id: _shelfIdController.text.toUpperCase(),
-                          capacity: int.parse(_capacityController.text),
-                          garmentsCount: 0,
-                          status: 'Open',
-                          lastActivity: 'Creado ahora',
-                        );
+                       final shelf = Shelf(
+                       id: _shelfIdController.text.toUpperCase(),
+                       capacity: int.parse(_capacityController.text),
+                       garmentsCount: 0,
+                       status: 'Open',
+                       lastActivity: 'Creado ahora',
+                       );
 
-                        widget.onAddShelf(shelf);
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
+                      try {
+                       await Supabase.instance.client.from('estantes').insert({
+                       'id_estante': int.tryParse(_shelfIdController.text) ?? (DateTime.now().millisecondsSinceEpoch % 100000),
+                       'descripcion': 'Estante ${_shelfIdController.text.toUpperCase()}',
+                       'codigo': _shelfIdController.text.toUpperCase(),
+                       });
+
+                      widget.onAddShelf(shelf);
+                      Navigator.pop(context, true);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(' Error: $e')),
+                         );
+                         }
+                         },
+                     child: const Text(
                         "Guardar Estante",
                         style: TextStyle(
                           fontSize: 16,

@@ -4,6 +4,7 @@ import '../models/order.dart';
 import 'new_order_screen.dart';
 import '../models/shelf.dart';
 import 'order_detail_screen.dart';
+import '../services/notification_service.dart';
 
 class RemindersScreen extends StatefulWidget {
   final List<Reminder> reminders;
@@ -29,6 +30,7 @@ class RemindersScreen extends StatefulWidget {
 
 class _RemindersScreenState extends State<RemindersScreen> {
   bool showAddForm = false;
+  final _notificationService = NotificationService();
 
   final TextEditingController taskController = TextEditingController();
   final TextEditingController clientController = TextEditingController();
@@ -132,6 +134,19 @@ class _RemindersScreenState extends State<RemindersScreen> {
       clientController.text,
     );
 
+     if (_selectedDate != null) {
+    final newReminder = Reminder(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: taskController.text,
+      clientName: clientController.text,
+      time: timeController.text,
+      deadlineText: dateController.text,
+      dateTime: _selectedDate!,
+    );
+    _notificationService.scheduleReminderNotification(newReminder);
+  }
+
+
     taskController.clear();
     clientController.clear();
     timeController.clear();
@@ -150,17 +165,31 @@ class _RemindersScreenState extends State<RemindersScreen> {
     );
   }
 
-  void _navigateToNewOrder() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => NewOrderScreen(
-          shelves: widget.shelves,
-          onSaveOrder: widget.onSaveOrder,
+    void _navigateToNewOrder() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NewOrderScreen(
+            shelves: widget.shelves,
+            onSaveOrder: (order) {
+              widget.onSaveOrder(order);
+
+              // Programa notificación 1 día antes de la entrega
+              final reminder = Reminder(
+                id: 'order-${order['id']}',
+                title: order['title'] ?? '',
+                clientName: order['clientName'] ?? '',
+                time: '',
+                deadlineText: order['expectedDeliveryDate'] ?? '',
+                dateTime: DateTime.tryParse(order['expectedDeliveryDate'] ?? '') 
+                    ?? DateTime.now().add(const Duration(days: 7)),
+              );
+              _notificationService.scheduleReminderNotification(reminder);
+            },
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   /// ✅ Navegar a OrderDetailScreen desde un pedido
   void _navigateToOrderDetail(String orderId) {
@@ -483,7 +512,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(.12),
+                  color: color.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -526,7 +555,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(.04),
+                      color: Colors.black.withValues(alpha: .04),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -543,8 +572,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         color: r.isCompleted 
-                            ? Colors.green.withOpacity(.12) 
-                            : color.withOpacity(.12),
+                            ? Colors.green.withValues(alpha: .12) 
+                            : color.withValues(alpha: .12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -626,7 +655,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(.08),
+                            color: Colors.green.withValues(alpha: .08),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Icon(

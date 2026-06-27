@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:taller_costura_flutter/services/notification_service.dart';
 import 'package:taller_costura_flutter/services/supabase_service.dart';
 import 'screens/dashboard_screen.dart';
 
@@ -8,7 +9,8 @@ import 'models/reminder.dart';
 import 'models/shelf.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+ await NotificationService().init();
+  await NotificationService().mostrarNotificacionEn10Segundos();  
   await Supabase.initialize(
     url: 'https://lckwfjszggnioczjfyxm.supabase.co',
     publishableKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxja3dmanN6Z2duaW9jempmeXhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODkzOTUsImV4cCI6MjA5Njg2NTM5NX0.8nV7pQPOosjPX4RyjYZxgVfyMqm9Rsjeaa8VO9ANIco',
